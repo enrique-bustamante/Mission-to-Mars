@@ -1,4 +1,4 @@
 # Mission-to-Mars
 
 ### Picture of Portfolio
-![Portfolio](Portfolio.png)
+![Portfolio](Images/Portfolio.png)
