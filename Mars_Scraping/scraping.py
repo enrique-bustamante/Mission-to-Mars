@@ -8,7 +8,8 @@ import datetime as dt
 
 def scrape_all():
     # Initiate headless driver for deployment
-    browser = Browser("chrome", executable_path="chromedriver", headless=True)
+    executable_path = {'executable_path': '/usr/local/bin/chromedriver'}
+    browser = Browser('chrome', **executable_path)
 
     news_title, news_paragraph = mars_news(browser)
 
@@ -18,7 +19,8 @@ def scrape_all():
         "news_paragraph": news_paragraph,
         "featured_image": featured_image(browser),
         "facts": mars_facts(),
-        "last_modified": dt.datetime.now()
+        "hemispheres": hemisphere(browser),
+        "last_modified": dt.datetime.now(),
     }
 
     # Stop webdriver and return data
@@ -99,7 +101,56 @@ def mars_facts():
     df.set_index('Description', inplace=True)
 
     # Convert dataframe into HTML format, add bootstrap
-    return df.to_html(classes="table table-striped")
+    return df.to_html(classes="table table-striped table-dark")
+
+def hemisphere(browser):
+    # Mac users
+    executable_path = {'executable_path': '/usr/local/bin/chromedriver'}
+    browser = Browser('chrome', **executable_path, headless=False)
+
+
+    # %%
+    # visit the site with the hemisphere photos
+    hemi_url = 'https://astrogeology.usgs.gov/search/results?q=hemisphere+enhanced&k1=target&v1=Mars'
+    browser.visit(hemi_url)
+    hemi_html = browser.html
+    hemi_soup = soup(hemi_html, "html.parser")
+
+    # %%
+    h3_tags_obj = hemi_soup.find_all('h3')
+    h3_tags_list = []
+    for text in h3_tags_obj:
+        h3_tags_list.append(text.get_text())
+    #%%
+    # Initialize list of dictionaries
+    img_dict_list = []
+
+    # Create for loop to parse data
+    for item in h3_tags_list:
+        # click on the link
+        browser.visit(hemi_url)
+        full_img_elem = browser.find_by_text(item, wait_time=1)
+        full_img_elem.click()
+
+
+        html = browser.html
+        img_soup = soup(html, 'html.parser')
+        # Find the more info button and click that
+        try:
+            browser.is_element_present_by_text('Open', wait_time=1)
+            open_elem = browser.links.find_by_partial_text('Open')
+            open_elem.click()
+
+        except:
+            pass
+
+        img_rel_url = img_soup.select_one('img.wide-image').get('src')
+        img_url = f'https://astrogeology.usgs.gov{img_rel_url}'
+        img_title = img_soup.find('h2', class_='title').get_text()
+        img_dict = {"img_url": img_url, "titles": img_title}
+        img_dict_list.append(img_dict)
+
+    return img_dict_list
 
 if __name__ == "__main__":
 
